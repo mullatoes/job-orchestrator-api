@@ -35,6 +35,8 @@ job-worker:
   fixed-delay-ms: 10000 #Worker runs every 10 seconds.
   retry-delay-seconds: 15 #Failed retryable jobs wait 15 seconds before being picked again.
   worker-id: local-worker-1 #Identifies which worker claimed the job.
+  stale-timeout-seconds: 60 #If a job stays PROCESSING for more than 60 seconds, treat it as stale.
+  recovery-fixed-delay-ms: 30000 #Run stale job recovery every 30 seconds.
 
 
 server:

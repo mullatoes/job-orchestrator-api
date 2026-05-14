@@ -19,5 +19,9 @@ public class JobWorkerProperties {
 
     private long retryDelaySeconds = 15;
 
+    private long staleTimeoutSeconds = 60;
+
+    private long recoveryFixedDelayMs = 30000;
+
     private String workerId = "local-worker-1";
 }
