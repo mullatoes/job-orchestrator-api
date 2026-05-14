@@ -3,6 +3,8 @@ package com.jdevs.joborchestratorapi.service;
 import com.jdevs.joborchestratorapi.dto.*;
 import com.jdevs.joborchestratorapi.exception.InvalidJobStateException;
 import com.jdevs.joborchestratorapi.exception.JobNotFoundException;
+import com.jdevs.joborchestratorapi.logging.MdcKeys;
+import org.slf4j.MDC;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -29,9 +31,11 @@ public class JobService {
     @Transactional
     public SubmitJobResponse submitJob(SubmitJobRequest request) {
         String jobId = generateJobId();
+        String correlationId = MDC.get(MdcKeys.CORRELATION_ID);
 
         JobEntity job = JobEntity.builder()
                 .jobId(jobId)
+                .correlationId(correlationId)
                 .jobType(request.getJobType())
                 .status(JobStatus.PENDING)
                 .payload(toJson(request.getPayload()))
@@ -43,6 +47,7 @@ public class JobService {
 
         return SubmitJobResponse.builder()
                 .jobId(savedJob.getJobId())
+                .correlationId(savedJob.getCorrelationId())
                 .jobType(savedJob.getJobType())
                 .status(savedJob.getStatus())
                 .build();
@@ -130,6 +135,7 @@ public class JobService {
     private JobResponse toJobResponse(JobEntity job) {
         return JobResponse.builder()
                 .jobId(job.getJobId())
+                .correlationId(job.getCorrelationId())
                 .jobType(job.getJobType())
                 .status(job.getStatus())
                 .attemptCount(job.getAttemptCount())

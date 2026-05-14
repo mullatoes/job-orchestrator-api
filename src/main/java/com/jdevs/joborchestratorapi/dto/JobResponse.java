@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 public class JobResponse {
 
     private String jobId;
+    private String correlationId;
     private JobType jobType;
     private JobStatus status;
     private int attemptCount;

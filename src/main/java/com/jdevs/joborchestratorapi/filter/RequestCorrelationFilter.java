@@ -1,5 +1,6 @@
 package com.jdevs.joborchestratorapi.filter;
 
+import com.jdevs.joborchestratorapi.logging.MdcKeys;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -14,7 +15,6 @@ import java.util.UUID;
 @Component
 public class RequestCorrelationFilter extends OncePerRequestFilter {
 
-    private static final String CORRELATION_ID = "correlationId";
     private static final String CORRELATION_HEADER = "X-Correlation-Id";
 
     @Override
@@ -22,7 +22,6 @@ public class RequestCorrelationFilter extends OncePerRequestFilter {
                                     HttpServletResponse response,
                                     FilterChain filterChain)
             throws ServletException, IOException {
-
         String correlationId = request.getHeader(CORRELATION_HEADER);
 
         if (correlationId == null || correlationId.isBlank()) {
@@ -30,12 +29,12 @@ public class RequestCorrelationFilter extends OncePerRequestFilter {
         }
 
         try {
-            MDC.put(CORRELATION_ID, correlationId);
+            MDC.put(MdcKeys.CORRELATION_ID, correlationId);
             response.setHeader(CORRELATION_HEADER, correlationId);
 
             filterChain.doFilter(request, response);
         } finally {
-            MDC.remove(CORRELATION_ID);
+            MDC.remove(MdcKeys.CORRELATION_ID);
         }
 
     }

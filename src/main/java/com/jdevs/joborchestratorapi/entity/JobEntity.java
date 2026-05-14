@@ -30,6 +30,9 @@ public class JobEntity {
     @Column(name = "job_id", nullable = false, unique = true, length = 50)
     private String jobId;
 
+    @Column(name = "correlation_id", length = 100)
+    private String correlationId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "job_type", nullable = false, length = 50)
     private JobType jobType;

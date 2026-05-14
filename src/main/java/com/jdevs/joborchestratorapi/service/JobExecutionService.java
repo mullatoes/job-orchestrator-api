@@ -3,6 +3,7 @@ package com.jdevs.joborchestratorapi.service;
 import com.jdevs.joborchestratorapi.config.JobWorkerProperties;
 import com.jdevs.joborchestratorapi.entity.JobEntity;
 import com.jdevs.joborchestratorapi.enums.JobStatus;
+import com.jdevs.joborchestratorapi.logging.MdcKeys;
 import com.jdevs.joborchestratorapi.repository.JobRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,9 +19,6 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class JobExecutionService {
 
-    private static final String JOB_ID = "jobId";
-    private static final String WORKER_ID = "workerId";
-
     private final JobRepository jobRepository;
     private final JobProcessor jobProcessor;
     private final JobWorkerProperties properties;
@@ -31,8 +29,12 @@ public class JobExecutionService {
                 .orElseThrow(() -> new IllegalStateException("Job not found with id: " + jobDatabaseId));
 
         try {
-            MDC.put(JOB_ID, job.getJobId());
-            MDC.put(WORKER_ID, properties.getWorkerId());
+            if (job.getCorrelationId() != null && !job.getCorrelationId().isBlank()) {
+                MDC.put(MdcKeys.CORRELATION_ID, job.getCorrelationId());
+            }
+
+            MDC.put(MdcKeys.JOB_ID, job.getJobId());
+            MDC.put(MdcKeys.WORKER_ID, properties.getWorkerId());
 
             if (!isProcessable(job)) {
                 log.info(
@@ -57,8 +59,9 @@ public class JobExecutionService {
         } catch (Exception ex) {
             handleProcessingFailure(job, ex);
         } finally {
-            MDC.remove(JOB_ID);
-            MDC.remove(WORKER_ID);
+            MDC.remove(MdcKeys.CORRELATION_ID);
+            MDC.remove(MdcKeys.JOB_ID);
+            MDC.remove(MdcKeys.WORKER_ID);
         }
     }
     private boolean isProcessable(JobEntity job) {

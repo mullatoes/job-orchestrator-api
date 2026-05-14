@@ -4,6 +4,7 @@ package com.jdevs.joborchestratorapi.service;
 import com.jdevs.joborchestratorapi.config.JobWorkerProperties;
 import com.jdevs.joborchestratorapi.entity.JobEntity;
 import com.jdevs.joborchestratorapi.enums.JobStatus;
+import com.jdevs.joborchestratorapi.logging.MdcKeys;
 import com.jdevs.joborchestratorapi.repository.JobRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,16 +21,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JobRecoveryService {
 
-    private static final String JOB_ID = "jobId";
-    private static final String WORKER_ID = "workerId";
-
     private final JobRepository jobRepository;
     private final JobWorkerProperties properties;
 
     @Transactional
     public void recoverStaleProcessingJobs() {
         try {
-            MDC.put(WORKER_ID, properties.getWorkerId());
+            MDC.put(MdcKeys.WORKER_ID, properties.getWorkerId());
 
             if (!properties.isEnabled()) {
                 log.debug("Job recovery is disabled because worker is disabled.");
@@ -56,12 +54,17 @@ public class JobRecoveryService {
                 recoverSingleJob(job);
             }
         } finally {
-            MDC.remove(WORKER_ID);
+            MDC.remove(MdcKeys.WORKER_ID);
         }
     }
+
     private void recoverSingleJob(JobEntity job) {
         try {
-            MDC.put(JOB_ID, job.getJobId());
+            if (job.getCorrelationId() != null && !job.getCorrelationId().isBlank()) {
+                MDC.put(MdcKeys.CORRELATION_ID, job.getCorrelationId());
+            }
+
+            MDC.put(MdcKeys.JOB_ID, job.getJobId());
 
             int nextAttemptCount = job.getAttemptCount() + 1;
             job.setAttemptCount(nextAttemptCount);
@@ -99,7 +102,8 @@ public class JobRecoveryService {
                     job.getLockedAt()
             );
         } finally {
-            MDC.remove(JOB_ID);
+            MDC.remove(MdcKeys.CORRELATION_ID);
+            MDC.remove(MdcKeys.JOB_ID);
         }
     }
 }

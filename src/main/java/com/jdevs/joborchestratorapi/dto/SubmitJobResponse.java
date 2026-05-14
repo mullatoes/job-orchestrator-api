@@ -10,6 +10,7 @@ import lombok.Getter;
 public class SubmitJobResponse {
 
     private String jobId;
+    private String correlationId;
     private JobType jobType;
     private JobStatus status;
 }

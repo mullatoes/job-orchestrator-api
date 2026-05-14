@@ -3,6 +3,7 @@ package com.jdevs.joborchestratorapi.service;
 import com.jdevs.joborchestratorapi.config.JobWorkerProperties;
 import com.jdevs.joborchestratorapi.entity.JobEntity;
 import com.jdevs.joborchestratorapi.enums.JobStatus;
+import com.jdevs.joborchestratorapi.logging.MdcKeys;
 import com.jdevs.joborchestratorapi.repository.JobRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,15 +19,13 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JobClaimService {
 
-    private static final String WORKER_ID = "workerId";
-
     private final JobRepository jobRepository;
     private final JobWorkerProperties properties;
 
     @Transactional
     public List<Long> claimReadyJobs() {
         try {
-            MDC.put(WORKER_ID, properties.getWorkerId());
+            MDC.put(MdcKeys.WORKER_ID, properties.getWorkerId());
 
             List<JobEntity> readyJobs = jobRepository.findReadyJobsForUpdate(properties.getBatchSize());
 
@@ -53,7 +52,7 @@ public class JobClaimService {
 
             return claimedJobIds;
         } finally {
-            MDC.remove(WORKER_ID);
+            MDC.remove(MdcKeys.WORKER_ID);
         }
     }
 }
