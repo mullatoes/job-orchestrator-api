@@ -54,4 +54,12 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error("An unexpected error occurred", null));
     }
+
+    @ExceptionHandler(InvalidJobStateException.class)
+    public ResponseEntity<ApiResponse<Void>> handleInvalidJobStateException(InvalidJobStateException ex) {
+        log.warn("Invalid job state operation. reason={}", ex.getMessage());
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(ex.getMessage(), null));
+    }
 }

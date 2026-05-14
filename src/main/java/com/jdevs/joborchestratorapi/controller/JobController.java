@@ -1,9 +1,6 @@
 package com.jdevs.joborchestratorapi.controller;
 
-import com.jdevs.joborchestratorapi.dto.ApiResponse;
-import com.jdevs.joborchestratorapi.dto.JobResponse;
-import com.jdevs.joborchestratorapi.dto.SubmitJobRequest;
-import com.jdevs.joborchestratorapi.dto.SubmitJobResponse;
+import com.jdevs.joborchestratorapi.dto.*;
 import com.jdevs.joborchestratorapi.enums.JobStatus;
 import com.jdevs.joborchestratorapi.service.JobService;
 import jakarta.validation.Valid;
@@ -50,6 +47,17 @@ public class JobController {
 
         return ResponseEntity.ok(
                 ApiResponse.success("Jobs retrieved successfully", response)
+        );
+    }
+
+    @PostMapping("/{jobId}/retry")
+    public ResponseEntity<ApiResponse<RetryJobResponse>> retryDeadLetterJob(
+            @PathVariable String jobId
+    ) {
+        RetryJobResponse response = jobService.retryDeadLetterJob(jobId);
+
+        return ResponseEntity.ok(
+                ApiResponse.success("Job requeued successfully", response)
         );
     }
 }

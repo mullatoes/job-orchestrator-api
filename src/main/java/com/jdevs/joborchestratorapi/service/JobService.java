@@ -1,5 +1,7 @@
 package com.jdevs.joborchestratorapi.service;
 
+import com.jdevs.joborchestratorapi.dto.RetryJobResponse;
+import com.jdevs.joborchestratorapi.exception.InvalidJobStateException;
 import com.jdevs.joborchestratorapi.exception.JobNotFoundException;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
@@ -13,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -59,6 +62,36 @@ public class JobService {
                 .stream()
                 .map(this::toJobResponse)
                 .toList();
+    }
+
+    @Transactional
+    public RetryJobResponse retryDeadLetterJob(String jobId) {
+        JobEntity job = jobRepository.findByJobId(jobId)
+                .orElseThrow(() -> new JobNotFoundException(jobId));
+
+        JobStatus previousStatus = job.getStatus();
+
+        if (previousStatus != JobStatus.DEAD_LETTER) {
+            throw new InvalidJobStateException(
+                    "Only DEAD_LETTER jobs can be manually retried. jobId=" + jobId + ", currentStatus=" + previousStatus
+            );
+        }
+
+        job.setStatus(JobStatus.RETRYABLE);
+        job.setAttemptCount(0);
+        job.setErrorMessage(null);
+        job.setNextRetryAt(LocalDateTime.now());
+        job.setLockedBy(null);
+        job.setLockedAt(null);
+        job.setStartedAt(null);
+        job.setCompletedAt(null);
+
+        return RetryJobResponse.builder()
+                .jobId(job.getJobId())
+                .previousStatus(previousStatus)
+                .currentStatus(job.getStatus())
+                .attemptCount(job.getAttemptCount())
+                .build();
     }
 
     private JobResponse toJobResponse(JobEntity job) {
