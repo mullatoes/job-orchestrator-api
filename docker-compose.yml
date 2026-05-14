@@ -1,0 +1,15 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: job-orchestrator-postgres
+    environment:
+      POSTGRES_DB: job_orchestrator_db
+      POSTGRES_USER: job_user
+      POSTGRES_PASSWORD: job_password
+    ports:
+      - "5434:5432"
+    volumes:
+      - job_orchestrator_data:/var/lib/postgresql/data
+
+volumes:
+  job_orchestrator_data:
