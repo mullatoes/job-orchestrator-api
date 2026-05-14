@@ -17,7 +17,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JobWorkerService {
 
-    private final JobRepository jobRepository;
+    private final JobClaimService jobClaimService;
     private final JobExecutionService jobExecutionService;
     private final JobWorkerProperties properties;
 
@@ -27,26 +27,19 @@ public class JobWorkerService {
             return;
         }
 
-        List<JobEntity> readyJobs = jobRepository.findReadyJobs(
-                List.of(JobStatus.PENDING, JobStatus.RETRYABLE),
-                LocalDateTime.now(),
-                PageRequest.of(0, properties.getBatchSize())
-        );
+        List<Long> claimedJobIds = jobClaimService.claimReadyJobs();
 
-        if (readyJobs.isEmpty()) {
-            log.debug("No ready jobs found for processing.");
+        if (claimedJobIds.isEmpty()) {
             return;
         }
 
-        log.info("Found ready jobs for processing. count={}", readyJobs.size());
-
-        for (JobEntity job : readyJobs) {
+        for (Long jobDatabaseId : claimedJobIds) {
             try {
-                jobExecutionService.processJob(job.getId());
+                jobExecutionService.processJob(jobDatabaseId);
             } catch (Exception ex) {
                 log.error(
-                        "Unexpected error while processing job. jobId={}",
-                        job.getJobId(),
+                        "Unexpected error while executing claimed job. jobDatabaseId={}",
+                        jobDatabaseId,
                         ex
                 );
             }

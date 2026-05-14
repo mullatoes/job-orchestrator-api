@@ -36,7 +36,6 @@ public class JobExecutionService {
         }
 
         try {
-            markAsProcessing(job);
 
             jobProcessor.process(job);
 
@@ -47,24 +46,7 @@ public class JobExecutionService {
     }
 
     private boolean isProcessable(JobEntity job) {
-        return job.getStatus() == JobStatus.PENDING
-                || job.getStatus() == JobStatus.RETRYABLE;
-    }
-
-    private void markAsProcessing(JobEntity job) {
-        LocalDateTime now = LocalDateTime.now();
-
-        job.setStatus(JobStatus.PROCESSING);
-        job.setStartedAt(now);
-        job.setLockedAt(now);
-        job.setLockedBy(properties.getWorkerId());
-        job.setErrorMessage(null);
-
-        log.info(
-                "Job marked as PROCESSING. jobId={}, workerId={}",
-                job.getJobId(),
-                properties.getWorkerId()
-        );
+        return job.getStatus() == JobStatus.PROCESSING;
     }
 
     private void markAsCompleted(JobEntity job) {
