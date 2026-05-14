@@ -1,13 +1,13 @@
 package com.jdevs.joborchestratorapi.service;
 
-import com.jdevs.joborchestratorapi.dto.RetryJobResponse;
+import com.jdevs.joborchestratorapi.dto.*;
 import com.jdevs.joborchestratorapi.exception.InvalidJobStateException;
 import com.jdevs.joborchestratorapi.exception.JobNotFoundException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
-import com.jdevs.joborchestratorapi.dto.JobResponse;
-import com.jdevs.joborchestratorapi.dto.SubmitJobRequest;
-import com.jdevs.joborchestratorapi.dto.SubmitJobResponse;
 import com.jdevs.joborchestratorapi.entity.JobEntity;
 import com.jdevs.joborchestratorapi.enums.JobStatus;
 import com.jdevs.joborchestratorapi.repository.JobRepository;
@@ -91,6 +91,39 @@ public class JobService {
                 .previousStatus(previousStatus)
                 .currentStatus(job.getStatus())
                 .attemptCount(job.getAttemptCount())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public PagedResponse<JobResponse> searchJobs(JobStatus status, int page, int size) {
+        PageRequest pageRequest = PageRequest.of(
+                page,
+                size,
+                Sort.by(Sort.Direction.DESC, "createdAt")
+        );
+
+        Page<JobEntity> jobPage;
+
+        if (status == null) {
+            jobPage = jobRepository.findAll(pageRequest);
+        } else {
+            jobPage = jobRepository.findByStatus(status, pageRequest);
+        }
+
+        List<JobResponse> jobs = jobPage.getContent()
+                .stream()
+                .map(this::toJobResponse)
+                .toList();
+
+        return PagedResponse.<JobResponse>builder()
+                .content(jobs)
+                .page(jobPage.getNumber())
+                .size(jobPage.getSize())
+                .totalElements(jobPage.getTotalElements())
+                .totalPages(jobPage.getTotalPages())
+                .first(jobPage.isFirst())
+                .last(jobPage.isLast())
+                .empty(jobPage.isEmpty())
                 .build();
     }
 

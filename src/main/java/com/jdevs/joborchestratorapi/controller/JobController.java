@@ -40,10 +40,20 @@ public class JobController {
     }
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<JobResponse>>> getJobsByStatus(
-            @RequestParam JobStatus status
+    public ResponseEntity<ApiResponse<PagedResponse<JobResponse>>> searchJobs(
+            @RequestParam(required = false) JobStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
     ) {
-        List<JobResponse> response = jobService.getJobsByStatus(status);
+        if (page < 0) {
+            throw new IllegalArgumentException("page must be greater than or equal to 0");
+        }
+
+        if (size < 1 || size > 100) {
+            throw new IllegalArgumentException("size must be between 1 and 100");
+        }
+
+        PagedResponse<JobResponse> response = jobService.searchJobs(status, page, size);
 
         return ResponseEntity.ok(
                 ApiResponse.success("Jobs retrieved successfully", response)
