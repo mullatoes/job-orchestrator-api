@@ -10,12 +10,7 @@ import org.springframework.stereotype.Service;
 public class JobProcessor {
 
     public void process(JobEntity job) {
-        log.info(
-                "Processing job. jobId={}, jobType={}, attemptCount={}",
-                job.getJobId(),
-                job.getJobType(),
-                job.getAttemptCount()
-        );
+        log.info("Processing job. jobType={}", job.getJobType());
 
         if (job.getPayload() != null && job.getPayload().contains("\"forceFail\":true")) {
             throw new IllegalStateException("Forced job failure for testing retry logic");
@@ -23,50 +18,46 @@ public class JobProcessor {
 
         simulateProcessing(job);
 
-        log.info(
-                "Job processing completed. jobId={}, jobType={}",
-                job.getJobId(),
-                job.getJobType()
-        );
+        log.info("Job processor completed successfully. jobType={}", job.getJobType());
     }
 
     private void simulateProcessing(JobEntity job) {
         if (job.getJobType() == JobType.EMAIL_NOTIFICATION) {
-            processEmailNotification(job);
+            processEmailNotification();
             return;
         }
 
         if (job.getJobType() == JobType.SMS_NOTIFICATION) {
-            processSmsNotification(job);
+            processSmsNotification();
             return;
         }
 
         if (job.getJobType() == JobType.REPORT_GENERATION) {
-            processReportGeneration(job);
+            processReportGeneration();
             return;
         }
 
         if (job.getJobType() == JobType.DATA_SYNC) {
-            processDataSync(job);
+            processDataSync();
             return;
         }
 
         throw new IllegalArgumentException("Unsupported job type: " + job.getJobType());
     }
 
-    private void processEmailNotification(JobEntity job) {
-        log.info("Simulating email notification job. jobId={}", job.getJobId());
+    private void processEmailNotification() {
+        log.info("Simulating email notification job.");
     }
 
-    private void processSmsNotification(JobEntity job) {
-        log.info("Simulating SMS notification job. jobId={}", job.getJobId());
+    private void processSmsNotification() {
+        log.info("Simulating SMS notification job.");
     }
 
-    private void processReportGeneration(JobEntity job) {
-        log.info("Simulating report generation job. jobId={}", job.getJobId());
+    private void processReportGeneration() {
+        log.info("Simulating report generation job.");
     }
 
-    private void processDataSync(JobEntity job) {
-        log.info("Simulating data sync job. jobId={}", job.getJobId());
+    private void processDataSync() {
+        log.info("Simulating data sync job.");
     }
 }

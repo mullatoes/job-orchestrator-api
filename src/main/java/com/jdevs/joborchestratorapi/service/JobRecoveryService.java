@@ -7,6 +7,7 @@ import com.jdevs.joborchestratorapi.enums.JobStatus;
 import com.jdevs.joborchestratorapi.repository.JobRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,78 +20,86 @@ import java.util.List;
 @RequiredArgsConstructor
 public class JobRecoveryService {
 
+    private static final String JOB_ID = "jobId";
+    private static final String WORKER_ID = "workerId";
+
     private final JobRepository jobRepository;
     private final JobWorkerProperties properties;
 
     @Transactional
     public void recoverStaleProcessingJobs() {
-        if (!properties.isEnabled()) {
-            log.debug("Job recovery is disabled because worker is disabled.");
-            return;
-        }
+        try {
+            MDC.put(WORKER_ID, properties.getWorkerId());
 
-        LocalDateTime staleBefore = LocalDateTime.now()
-                .minusSeconds(properties.getStaleTimeoutSeconds());
+            if (!properties.isEnabled()) {
+                log.debug("Job recovery is disabled because worker is disabled.");
+                return;
+            }
 
-        List<JobEntity> staleJobs = jobRepository.findStaleProcessingJobs(
-                JobStatus.PROCESSING,
-                staleBefore,
-                PageRequest.of(0, properties.getBatchSize())
-        );
+            LocalDateTime staleBefore = LocalDateTime.now()
+                    .minusSeconds(properties.getStaleTimeoutSeconds());
 
-        if (staleJobs.isEmpty()) {
-            log.debug("No stale PROCESSING jobs found.");
-            return;
-        }
+            List<JobEntity> staleJobs = jobRepository.findStaleProcessingJobs(
+                    JobStatus.PROCESSING,
+                    staleBefore,
+                    PageRequest.of(0, properties.getBatchSize())
+            );
 
-        log.warn(
-                "Found stale PROCESSING jobs. count={}, staleBefore={}",
-                staleJobs.size(),
-                staleBefore
-        );
+            if (staleJobs.isEmpty()) {
+                log.debug("No stale PROCESSING jobs found.");
+                return;
+            }
 
-        for (JobEntity job : staleJobs) {
-            recoverSingleJob(job);
+            log.warn("Found stale PROCESSING jobs. count={}, staleBefore={}", staleJobs.size(), staleBefore);
+
+            for (JobEntity job : staleJobs) {
+                recoverSingleJob(job);
+            }
+        } finally {
+            MDC.remove(WORKER_ID);
         }
     }
-
     private void recoverSingleJob(JobEntity job) {
-        int nextAttemptCount = job.getAttemptCount() + 1;
-        job.setAttemptCount(nextAttemptCount);
+        try {
+            MDC.put(JOB_ID, job.getJobId());
 
-        String recoveryMessage = "Job recovered from stale PROCESSING state";
+            int nextAttemptCount = job.getAttemptCount() + 1;
+            job.setAttemptCount(nextAttemptCount);
 
-        job.setErrorMessage(recoveryMessage);
+            String recoveryMessage = "Job recovered from stale PROCESSING state";
 
-        if (nextAttemptCount >= job.getMaxAttempts()) {
-            job.setStatus(JobStatus.DEAD_LETTER);
-            job.setNextRetryAt(null);
+            job.setErrorMessage(recoveryMessage);
+
+            if (nextAttemptCount >= job.getMaxAttempts()) {
+                job.setStatus(JobStatus.DEAD_LETTER);
+                job.setNextRetryAt(null);
+
+                log.warn(
+                        "Stale job moved to DEAD_LETTER. attemptCount={}, maxAttempts={}, lockedBy={}, lockedAt={}",
+                        job.getAttemptCount(),
+                        job.getMaxAttempts(),
+                        job.getLockedBy(),
+                        job.getLockedAt()
+                );
+                return;
+            }
+
+            LocalDateTime nextRetryAt = LocalDateTime.now()
+                    .plusSeconds(properties.getRetryDelaySeconds());
+
+            job.setStatus(JobStatus.RETRYABLE);
+            job.setNextRetryAt(nextRetryAt);
 
             log.warn(
-                    "Stale job moved to DEAD_LETTER. jobId={}, attemptCount={}, maxAttempts={}, lockedBy={}, lockedAt={}",
-                    job.getJobId(),
+                    "Stale job recovered as RETRYABLE. attemptCount={}, maxAttempts={}, nextRetryAt={}, lockedBy={}, lockedAt={}",
                     job.getAttemptCount(),
                     job.getMaxAttempts(),
+                    nextRetryAt,
                     job.getLockedBy(),
                     job.getLockedAt()
             );
-            return;
+        } finally {
+            MDC.remove(JOB_ID);
         }
-
-        LocalDateTime nextRetryAt = LocalDateTime.now()
-                .plusSeconds(properties.getRetryDelaySeconds());
-
-        job.setStatus(JobStatus.RETRYABLE);
-        job.setNextRetryAt(nextRetryAt);
-
-        log.warn(
-                "Stale job recovered as RETRYABLE. jobId={}, attemptCount={}, maxAttempts={}, nextRetryAt={}, lockedBy={}, lockedAt={}",
-                job.getJobId(),
-                job.getAttemptCount(),
-                job.getMaxAttempts(),
-                nextRetryAt,
-                job.getLockedBy(),
-                job.getLockedAt()
-        );
     }
 }

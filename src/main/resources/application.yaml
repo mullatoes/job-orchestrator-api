@@ -39,5 +39,12 @@ job-worker:
   recovery-fixed-delay-ms: 30000 #Run stale job recovery every 30 seconds.
 
 
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} %-5level [%thread] correlationId=%X{correlationId:-N/A} jobId=%X{jobId:-N/A} workerId=%X{workerId:-N/A} %logger{36} - %msg%n"
+  level:
+    com.jdevs.joborchestrator: INFO
+
+
 server:
   port: 8080

@@ -6,6 +6,7 @@ import com.jdevs.joborchestratorapi.enums.JobStatus;
 import com.jdevs.joborchestratorapi.repository.JobRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +18,9 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class JobExecutionService {
 
+    private static final String JOB_ID = "jobId";
+    private static final String WORKER_ID = "workerId";
+
     private final JobRepository jobRepository;
     private final JobProcessor jobProcessor;
     private final JobWorkerProperties properties;
@@ -26,25 +30,37 @@ public class JobExecutionService {
         JobEntity job = jobRepository.findById(jobDatabaseId)
                 .orElseThrow(() -> new IllegalStateException("Job not found with id: " + jobDatabaseId));
 
-        if (!isProcessable(job)) {
-            log.info(
-                    "Skipping job because it is no longer processable. jobId={}, status={}",
-                    job.getJobId(),
-                    job.getStatus()
-            );
-            return;
-        }
-
         try {
+            MDC.put(JOB_ID, job.getJobId());
+            MDC.put(WORKER_ID, properties.getWorkerId());
+
+            if (!isProcessable(job)) {
+                log.info(
+                        "Skipping job because it is no longer processable. status={}",
+                        job.getStatus()
+                );
+                return;
+            }
+
+            log.info(
+                    "Starting job execution. jobType={}, attemptCount={}, maxAttempts={}",
+                    job.getJobType(),
+                    job.getAttemptCount(),
+                    job.getMaxAttempts()
+            );
 
             jobProcessor.process(job);
 
             markAsCompleted(job);
+
+            log.info("Finished job execution successfully.");
         } catch (Exception ex) {
             handleProcessingFailure(job, ex);
+        } finally {
+            MDC.remove(JOB_ID);
+            MDC.remove(WORKER_ID);
         }
     }
-
     private boolean isProcessable(JobEntity job) {
         return job.getStatus() == JobStatus.PROCESSING;
     }
