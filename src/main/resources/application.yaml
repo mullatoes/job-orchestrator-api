@@ -30,10 +30,11 @@ management:
         enabled: true
 
 job-worker:
-  enabled: true
-  batch-size: 5
-  fixed-delay-ms: 10000
-  max-attempts: 3
+  enabled: true #Turns the worker on.
+  batch-size: 5 #Worker processes up to 5 jobs per cycle.
+  fixed-delay-ms: 10000 #Worker runs every 10 seconds.
+  retry-delay-seconds: 15 #Failed retryable jobs wait 15 seconds before being picked again.
+  worker-id: local-worker-1 #Identifies which worker claimed the job.
 
 
 server:
