@@ -1,5 +1,6 @@
 package com.jdevs.joborchestratorapi.service;
 
+import com.jdevs.joborchestratorapi.exception.JobNotFoundException;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 import com.jdevs.joborchestratorapi.dto.JobResponse;
@@ -12,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -46,9 +48,17 @@ public class JobService {
     @Transactional(readOnly = true)
     public JobResponse getJobByJobId(String jobId) {
         JobEntity job = jobRepository.findByJobId(jobId)
-                .orElseThrow(() -> new IllegalArgumentException("Job not found: " + jobId));
+                .orElseThrow(() -> new JobNotFoundException(jobId));
 
         return toJobResponse(job);
+    }
+
+    @Transactional(readOnly = true)
+    public List<JobResponse> getJobsByStatus(JobStatus status) {
+        return jobRepository.findByStatusOrderByCreatedAtAsc(status)
+                .stream()
+                .map(this::toJobResponse)
+                .toList();
     }
 
     private JobResponse toJobResponse(JobEntity job) {
