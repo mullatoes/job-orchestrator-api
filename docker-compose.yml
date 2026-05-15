@@ -10,6 +10,27 @@ services:
       - "5434:5432"
     volumes:
       - job_orchestrator_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U job_user -d job_orchestrator_db" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  job-orchestrator-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: job-orchestrator-api
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/job_orchestrator_db
+      SPRING_DATASOURCE_USERNAME: job_user
+      SPRING_DATASOURCE_PASSWORD: job_password
+      JOB_WORKER_ID: docker-worker-1
+    ports:
+      - "8080:8080"
 
 volumes:
   job_orchestrator_data:

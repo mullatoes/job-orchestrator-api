@@ -3,9 +3,9 @@ spring:
     name: job-orchestrator-api
 
   datasource:
-    url: jdbc:postgresql://localhost:5434/job_orchestrator_db
-    username: job_user
-    password: job_password
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5434/job_orchestrator_db}
+    username: ${SPRING_DATASOURCE_USERNAME:job_user}
+    password: ${SPRING_DATASOURCE_PASSWORD:job_password}
 
   jpa:
     hibernate:
@@ -34,7 +34,7 @@ job-worker:
   batch-size: 5 #Worker processes up to 5 jobs per cycle.
   fixed-delay-ms: 10000 #Worker runs every 10 seconds.
   retry-delay-seconds: 15 #Failed retryable jobs wait 15 seconds before being picked again.
-  worker-id: local-worker-1 #Identifies which worker claimed the job.
+  worker-id: ${JOB_WORKER_ID:local-worker-1} #Identifies which worker claimed the job.
   stale-timeout-seconds: 60 #If a job stays PROCESSING for more than 60 seconds, treat it as stale.
   recovery-fixed-delay-ms: 30000 #Run stale job recovery every 30 seconds.
 
